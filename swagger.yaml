@@ -1,0 +1,92 @@
+swagger: "2.0"
+info:
+  description: "URL shortener"
+  version: "1.0.0"
+  title: "URL shortener"
+host: "localhost"
+basePath: "/"
+tags:
+- name: "URL shortener"
+schemes:
+- "http"
+paths:
+  /api:
+    post:
+      tags:
+      - "URL shortener"
+      summary: "Create a short URL"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "URL to shorten"
+        required: true
+        schema:
+          type: "string"
+          description: "Valid URL, complete with protocol and www"
+          example: "http://www.mycoolwebsite.com"
+      responses:
+        "200":
+          description: "URL successfully shortened"
+          schema:
+            $ref: "#/definitions/LocationResponse"
+        "400":
+          description: "Invalid URL"
+        "403":
+          description: "URL already exists"
+        "500":
+          description: "Internal Server Error"          
+  /api/{urlKey}:
+    get:
+      tags:
+      - "URL shortener"
+      summary: "Access original URL via short URL"
+      description: "If found, redirects to the original website"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "urlKey"
+        in: "path"
+        description: "Short URL key used to redirect to the original website"
+        required: true
+        type: "string"
+      responses:
+        "308":
+          description: "Redirection to original website"
+        "404":
+          description: "URL key not found"
+        "500":
+          description: "Internal Server Error"
+    delete:
+      tags:
+        - "URL shortener"
+      summary: "Delete short URL"
+      description: "If found, delete the URL from db"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "urlKey"
+        in: "path"
+        description: "Short URL key used to delete the original website from the DB."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "URL successfully deleted"
+    
+definitions:
+  LocationResponse:
+    description: "Contains the shorten URL and the its key"
+    type: "object"
+    properties:
+      urlKey:
+        description: "Short URL key. Use it to access the full url or to delete it"
+        type: "string"
+        example: "MTU5NTE3Nzk5NjYwNw"
+      location:
+        description: "Full path of the shorten url. It's equal to the Location header"
+        type: "string"
+        example: "http://localhost:8080/api/MTU5NTE3Nzk5NjYwNw"
