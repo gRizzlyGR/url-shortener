@@ -12,29 +12,37 @@ Keys are the encoded timestamps and values are the original URLs.
 
 Base64-encoding is necessary because keys must be strings (or better, slices of bytes). Values as well must be strings.
 
-# Installation instructions
+# Installation
 
 First of all, open a terminal and navigate in the source code folder.
 
-To init the context and install all dependencies, run
+To init the environment and install all dependencies, enter
 
 ``` 
 go mod tidy
 ```
 
-To build the executable, run
+To build the executable, enter
 
 ``` 
 go build
 ```
 
-To run the executable, run
+To run the executable, enter
 
 * On Linux: `./url-shortner`
 * On Windows: `url-shortner.exe`
 * On Mac: `TODO`
+##
+To bind a custom port, enter
 
-To run unit tests, run
+* On Linux: `./url-shortner 5555`
+* On Windows: `url-shortner.exe 5555`
+* On Mac: `TODO`
+##
+If no port is provided or it's invalid, the default one is `8080` .
+
+To run unit tests, enter
 
 ``` 
 go test
@@ -42,7 +50,7 @@ go test
 
 # API commands example
 
-The web service runs on `localhost:8080` . If you have any other service bound on that port, please close it, otherwise the service won't run.
+The web service runs on by default on `localhost:8080` if no port is provided as argument. If you have any other service bound on that port, please close it, otherwise the service won't run.
 
 Examples here use [curl](https://curl.haxx.se/).
 

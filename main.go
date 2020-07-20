@@ -6,13 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 var host = "localhost"
-var port = "8080"
+var defaultPort = "8080"
 var urlKeyPattern = "urlKey"
 
 // For convenience, DBs are stored in the source code folder
@@ -31,6 +32,36 @@ type locationResponse struct {
 
 type redirectionsCountResponse struct {
 	RedirectionsCount int `json:"redirectionsCount"`
+}
+
+func main() {
+	if len(os.Args) > 1 {
+		defaultPort = initPort(os.Args[1])
+	}
+
+	r := mux.NewRouter()
+
+	r.HandleFunc("/api", postURL).Methods(http.MethodPost)
+	r.HandleFunc("/api/count/{urlKey}", countRedirections).Methods(http.MethodGet)
+	r.HandleFunc("/api/{urlKey}", getURL).Methods(http.MethodGet)
+	r.HandleFunc("/api/{urlKey}", deleteURL).Methods(http.MethodDelete)
+	r.HandleFunc("/api/{urlKey}", putURL).Methods(http.MethodPut)
+	r.HandleFunc("/api", notFound)
+
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("public/")))
+
+	log.Printf("Listening on port %s\n", defaultPort)
+	log.Fatal(http.ListenAndServe(":"+defaultPort, r))
+}
+
+func initPort(port string) string {
+	_, err := strconv.Atoi(port)
+	if err != nil {
+		log.Printf("Invalid port %s, using default one: %s", port, defaultPort)
+		return defaultPort
+	}
+
+	return port
 }
 
 func sendJSON(w http.ResponseWriter, code int, response interface{}) {
@@ -74,7 +105,7 @@ func getURL(w http.ResponseWriter, r *http.Request) {
 
 func postURL(w http.ResponseWriter, r *http.Request) {
 	log.Println("POST URL")
-	
+
 	// Generate key for storage
 	urlKey := GenerateKey(false)
 
@@ -196,25 +227,9 @@ func processURLInfo(w http.ResponseWriter, r *http.Request, urlKey string, httpS
 	// Set count redirections to 0
 	go NewDao(shortURLCountDbPath).Save(urlKey, "0")
 
-	fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
+	fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, defaultPort, urlKey)
 	log.Printf("URL %s is located at: %s\n", url, fullPath)
 
 	// Send location as JSON as well
 	sendJSON(w, httpStatus, locationResponse{urlKey, fullPath, "OK"})
-}
-
-func main() {
-	r := mux.NewRouter()
-
-	r.HandleFunc("/api", postURL).Methods(http.MethodPost)
-	r.HandleFunc("/api/count/{urlKey}", countRedirections).Methods(http.MethodGet)
-	r.HandleFunc("/api/{urlKey}", getURL).Methods(http.MethodGet)
-	r.HandleFunc("/api/{urlKey}", deleteURL).Methods(http.MethodDelete)
-	r.HandleFunc("/api/{urlKey}", putURL).Methods(http.MethodPut)
-	r.HandleFunc("/api", notFound)
-
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("public/")))
-
-	log.Printf("Listening on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
 }
