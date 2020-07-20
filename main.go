@@ -74,48 +74,11 @@ func getURL(w http.ResponseWriter, r *http.Request) {
 
 func postURL(w http.ResponseWriter, r *http.Request) {
 	log.Println("POST URL")
+	
 	// Generate key for storage
 	urlKey := GenerateKey(false)
 
 	processURLInfo(w, r, urlKey, http.StatusCreated)
-	
-	// body, err := ioutil.ReadAll(r.Body)
-
-	// if err != nil {
-	// 	log.Printf("Error reading body: %v\n", err)
-	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
-	// 	return
-	// }
-
-	// url := string(body)
-	// valid := IsURLValid(url)
-
-	// if !valid {
-	// 	log.Printf("Invalid URL: %v\n", url)
-	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
-	// 	return
-	// }
-
-	// // Save the urlKey and the url for direct access
-	// status := NewDao(shortURLDbPath).Save(urlKey, url)
-
-	// if status == Error {
-	// 	log.Println("Internal Server Error")
-	// 	sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
-	// 	return
-	// }
-
-	// // Init count redirections to 0
-	// go NewDao(shortURLCountDbPath).Save(urlKey, "0")
-
-	// fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
-	// log.Printf("URL %s is located at: %s\n", url, fullPath)
-
-	// // Set Location header, that can be accessed with a get
-	// w.Header().Set("Location", fullPath)
-
-	// // Send location as JSON as well
-	// sendJSON(w, http.StatusCreated, locationResponse{urlKey, fullPath, "OK"})
 }
 
 func putURL(w http.ResponseWriter, r *http.Request) {
@@ -136,40 +99,6 @@ func putURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	processURLInfo(w, r, urlKey, http.StatusOK)
-
-	// body, err := ioutil.ReadAll(r.Body)
-
-	// url := string(body)
-	// valid := IsURLValid(url)
-
-	// if !valid {
-	// 	log.Printf("Invalid URL: %v\n", url)
-	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
-	// 	return
-	// }
-
-	// if err != nil {
-	// 	log.Printf("Error reading body: %v\n", err)
-	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
-	// 	return
-	// }
-
-	// status = dao.Save(urlKey, string(body))
-
-	// if status == Error {
-	// 	log.Println("Internal Server Error")
-	// 	sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
-	// 	return
-	// }
-
-	// // Restore count redirections to 0 for new url key
-	// go NewDao(shortURLCountDbPath).Save(urlKey, "0")
-
-	// fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
-	// log.Printf("New URL %s is located at: %s\n", url, fullPath)
-
-	// // Send location as JSON as well
-	// sendJSON(w, http.StatusCreated, locationResponse{urlKey, fullPath, "OK"})
 }
 
 func deleteURL(w http.ResponseWriter, r *http.Request) {
@@ -246,7 +175,7 @@ func processURLInfo(w http.ResponseWriter, r *http.Request, urlKey string, httpS
 
 	if !valid {
 		log.Printf("Invalid URL: %v\n", url)
-		sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
+		sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: '" + url + "'. Be sure it's in the form http://www.placeholder.com"})
 		return
 	}
 

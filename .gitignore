@@ -15,4 +15,6 @@
 # vendor/
 
 *db*/
+*Db/*
+*url-shortener*
 *coverage*

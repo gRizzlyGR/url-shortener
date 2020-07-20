@@ -4,7 +4,7 @@ URL shortener web service in Golang. It allows to generate an ID for URLs and us
 
 # Description
 
-All URL IDs are base64-encoded timestamps in milliseconds mainly becaue timestamps are natural identifiers, with no possibility of clashing.
+All URL IDs are base64-encoded timestamps in milliseconds mainly because timestamps are natural identifiers, with no possibility of clashing.
 
 Data are saved using [bitcask](https://github.com/prologic/bitcask), a key-value data store.
 
@@ -30,7 +30,7 @@ go build
 
 To run the executable, run
 
-* On Linux: `TODO`
+* On Linux: `./url-shortner`
 * On Windows: `url-shortner.exe`
 * On Mac: `TODO`
 

@@ -79,11 +79,13 @@ func (dao *Dao) RemoveByKey(key string) DbOperationStatus {
 	}
 	defer db.Close()
 
-	err = db.Delete([]byte(key))
-	if err == bitcask.ErrKeyNotFound {
-		log.Printf("Not Found: %v", err)
+	byteKey := []byte(key)
+	
+	if !db.Has(byteKey) {
 		return NotFound
 	}
+
+	err = db.Delete([]byte(key))
 
 	if err != nil {
 		log.Printf("Unable to delete value: %v", err)
