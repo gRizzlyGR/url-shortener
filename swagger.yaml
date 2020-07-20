@@ -1,33 +1,31 @@
 swagger: "2.0"
 info:
-  description: "URL shortener"
+  description: "URL shortener written in Go"
   version: "1.0.0"
   title: "URL shortener"
 host: "localhost"
 basePath: "/"
 tags:
-- name: "URL shortener"
+  - name: "URL shortener"
 schemes:
-- "http"
+  - "http"
 paths:
   /api:
     post:
       tags:
-      - "URL shortener"
+        - "URL shortener"
       summary: "Create a short URL"
-      consumes:
-      - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        description: "URL to shorten"
-        required: true
-        schema:
-          type: "string"
-          description: "Valid URL, complete with protocol and www"
-          example: "http://www.mycoolwebsite.com"
+        - in: "body"
+          name: "body"
+          description: "URL to shorten"
+          required: true
+          schema:
+            type: "string"
+            description: "Valid URL, complete with protocol and www"
+            example: "http://www.mycoolwebsite.com"
       responses:
         "200":
           description: "URL successfully shortened"
@@ -35,24 +33,26 @@ paths:
             $ref: "#/definitions/LocationResponse"
         "400":
           description: "Invalid URL"
-        "403":
-          description: "URL already exists"
+          schema:
+            $ref: "#/definitions/LocationResponse"
         "500":
-          description: "Internal Server Error"          
+          description: "Internal Server Error"
   /api/{urlKey}:
     get:
       tags:
-      - "URL shortener"
+        - "URL shortener"
       summary: "Access original URL via short URL"
       description: "If found, redirects to the original website"
+      consumes:
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "urlKey"
-        in: "path"
-        description: "Short URL key used to redirect to the original website"
-        required: true
-        type: "string"
+        - name: "urlKey"
+          in: "path"
+          description: "Short URL key used to redirect to the original website"
+          required: true
+          type: "string"
       responses:
         "308":
           description: "Redirection to original website"
@@ -65,18 +65,74 @@ paths:
         - "URL shortener"
       summary: "Delete short URL"
       description: "If found, delete the URL from db"
+      consumes:
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "urlKey"
-        in: "path"
-        description: "Short URL key used to delete the original website from the DB."
-        required: true
-        type: "string"
+        - name: "urlKey"
+          in: "path"
+          description: "Short URL key used to delete the original website from the DB."
+          required: true
+          type: "string"
       responses:
-        200:
+        "200":
           description: "URL successfully deleted"
-    
+        "404":
+          description: "URL key not found"
+        "500":
+          description: "Internal Server Error"
+    put:
+      tags:
+        - "URL shortener"
+      summary: "Replace a short URL"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "URL to replace to the provided url key"
+          required: true
+          schema:
+            type: "string"
+            description: "Valid URL, complete with protocol and www"
+            example: "http://www.mycoolwebsite.com"
+      responses:
+        "200":
+          description: "URL key now points to the new provided url"
+          schema:
+            $ref: "#/definitions/LocationResponse"
+        "400":
+          description: "Invalid URL"
+          schema:
+            $ref: "#/definitions/LocationResponse"
+        "500":
+          description: "Internal Server Error"
+  /api/count/{urlKey}:
+    get:
+      tags:
+        - "URL shortener"
+      summary: "Redirections count"
+      description: "Return the redirections count for the specified url key. It may not work if the shortned URL is http only (no https)"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "urlKey"
+          in: "path"
+          description: "Short URL key used to delete the original website from the DB."
+          required: true
+          type: "string"
+      responses:
+        "200":
+          description: "Return the redirection count"
+          schema:
+            $ref: "#/definitions/RedirectionsCountResponse"
+        "404":
+          description: "URL key not found"
+        "500":
+          description: "Internal Server Error"
 definitions:
   LocationResponse:
     description: "Contains the shorten URL and the its key"
@@ -90,3 +146,15 @@ definitions:
         description: "Full path of the shorten url. It's equal to the Location header"
         type: "string"
         example: "http://localhost:8080/api/MTU5NTE3Nzk5NjYwNw"
+      message:
+        description: "Error message"
+        type: "string"
+        example: "URL already exists in the DB"
+  RedirectionsCountResponse:
+    description: "Contains the shorten URL and the its key"
+    type: "object"
+    properties:
+      redirectionsCount:
+        description: "How many time the short url has been used for redirecting to the original URL"
+        type: "integer"
+        example: 1

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -16,7 +17,7 @@ var urlKeyPattern = "urlKey"
 
 // For convenience, DBs are stored in the source code folder
 var shortURLDbPath = "shortURLDb"
-var fullURLDbPath = "fullURLDb"
+var shortURLCountDbPath = "shortURLCountDb"
 
 type genericResponse struct {
 	Message string `json:"message"`
@@ -25,19 +26,33 @@ type genericResponse struct {
 type locationResponse struct {
 	URLKey   string `json:"urlKey"`
 	Location string `json:"location"`
-	Message string `json:"message"`
+	Message  string `json:"message"`
 }
 
-func sendJSON(w http.ResponseWriter, code int, res interface{}) {
-	jsonResponse, _ := json.Marshal(res)
+type redirectionsCountResponse struct {
+	RedirectionsCount int `json:"redirectionsCount"`
+}
+
+func sendJSON(w http.ResponseWriter, code int, response interface{}) {
+	jsonResponse, _ := json.Marshal(response)
 	w.Header().Set("Content-Type", "application/json")
 
 	w.WriteHeader(code)
 	w.Write(jsonResponse)
 }
 
-func get(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET")
+// turnOffCache disables caching in almost all browser using different headers.
+// It may not work for the redirection of unsecured http requests (i.e. no
+// https)
+func turnOffCache(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "private, no-cache, no-store, must-revalidate, max-age=0, proxy-revalidate, s-maxage=0")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Vary", "*")
+}
+
+func getURL(w http.ResponseWriter, r *http.Request) {
+	log.Println("GET URL")
 	urlKey := mux.Vars(r)[urlKeyPattern]
 	url, status := NewDao(shortURLDbPath).FindByKey(urlKey)
 
@@ -52,101 +67,132 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go increaseRedirections(urlKey)
+	turnOffCache(w)
 	http.Redirect(w, r, url, http.StatusPermanentRedirect)
 }
 
-func post(w http.ResponseWriter, r *http.Request) {
-	log.Println("POST")
-	body, err := ioutil.ReadAll(r.Body)
+func postURL(w http.ResponseWriter, r *http.Request) {
+	log.Println("POST URL")
+	// Generate key for storage
+	urlKey := GenerateKey(false)
 
-	if err != nil {
-		log.Printf("Error reading body: %v\n", err)
-		sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
-		return
-	}
+	processURLInfo(w, r, urlKey, http.StatusCreated)
+	
+	// body, err := ioutil.ReadAll(r.Body)
 
-	url := string(body)
-	valid := IsURLValid(url)
+	// if err != nil {
+	// 	log.Printf("Error reading body: %v\n", err)
+	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
+	// 	return
+	// }
 
-	if !valid {
-		log.Printf("Invalid URL: %v\n", url)
-		sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url})
-		return
-	}
+	// url := string(body)
+	// valid := IsURLValid(url)
 
-	fullURLDao := NewDao(fullURLDbPath)
-	urlKey, status := fullURLDao.FindByKey(url)
+	// if !valid {
+	// 	log.Printf("Invalid URL: %v\n", url)
+	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
+	// 	return
+	// }
 
-	if status == Error {
-		log.Println("Internal Server Error")
-		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
-		return
-	}
+	// // Save the urlKey and the url for direct access
+	// status := NewDao(shortURLDbPath).Save(urlKey, url)
 
-	if urlKey != "" {
-		log.Printf("URL already exists: %v\n", url)
-		fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
-		
-		// Set Location header, that can be accessed with a get
-		w.Header().Set("Location", fullPath)
-		sendJSON(w, http.StatusForbidden, locationResponse{urlKey, fullPath, "URL already exists in the DB"})
-		return		
-	}
+	// if status == Error {
+	// 	log.Println("Internal Server Error")
+	// 	sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
+	// 	return
+	// }
 
-	// Geneate key for storage
-	urlKey = GenerateKey(false)
+	// // Init count redirections to 0
+	// go NewDao(shortURLCountDbPath).Save(urlKey, "0")
 
-	// Save the urlKey and the url for direct access
-	status = NewDao(shortURLDbPath).Save(urlKey, url)
+	// fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
+	// log.Printf("URL %s is located at: %s\n", url, fullPath)
 
-	if status == Error {
-		log.Println("Internal Server Error")
-		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
-		return
-	}
+	// // Set Location header, that can be accessed with a get
+	// w.Header().Set("Location", fullPath)
 
-	// To check if the URL is already present in the DB, we need to save the URL
-	// itself in the DB as key, so to prevent in the future that the same URL is
-	// shortened again. This approach makes the DB a Bimap de facto, with a
-	// short URL that is key of a full URL, and a full URL that is key of a
-	// short URL
-	status = fullURLDao.Save(url, urlKey)
-
-	fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
-	log.Printf("URL %s is located at: %s\n", url, fullPath)
-
-	// Set Location header, that can be accessed with a get
-	w.Header().Set("Location", fullPath)
-
-	// Send location as JSON as well
-	sendJSON(w, http.StatusCreated, locationResponse{urlKey, fullPath, "OK"})
+	// // Send location as JSON as well
+	// sendJSON(w, http.StatusCreated, locationResponse{urlKey, fullPath, "OK"})
 }
 
-func delete(w http.ResponseWriter, r *http.Request) {
-	log.Println("DELETE")
+func putURL(w http.ResponseWriter, r *http.Request) {
+	log.Println("PUT URL")
+	urlKey := mux.Vars(r)[urlKeyPattern]
+	dao := NewDao(shortURLDbPath)
+	exists, status := dao.DoesExist(urlKey)
+
+	if status == Error {
+		log.Println("Internal Server Error")
+		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
+		return
+	}
+
+	if !exists {
+		sendJSON(w, http.StatusNotFound, genericResponse{"No URL found for key " + urlKey})
+		return
+	}
+
+	processURLInfo(w, r, urlKey, http.StatusOK)
+
+	// body, err := ioutil.ReadAll(r.Body)
+
+	// url := string(body)
+	// valid := IsURLValid(url)
+
+	// if !valid {
+	// 	log.Printf("Invalid URL: %v\n", url)
+	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
+	// 	return
+	// }
+
+	// if err != nil {
+	// 	log.Printf("Error reading body: %v\n", err)
+	// 	sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
+	// 	return
+	// }
+
+	// status = dao.Save(urlKey, string(body))
+
+	// if status == Error {
+	// 	log.Println("Internal Server Error")
+	// 	sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
+	// 	return
+	// }
+
+	// // Restore count redirections to 0 for new url key
+	// go NewDao(shortURLCountDbPath).Save(urlKey, "0")
+
+	// fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
+	// log.Printf("New URL %s is located at: %s\n", url, fullPath)
+
+	// // Send location as JSON as well
+	// sendJSON(w, http.StatusCreated, locationResponse{urlKey, fullPath, "OK"})
+}
+
+func deleteURL(w http.ResponseWriter, r *http.Request) {
+	log.Println("DELETE URL")
 
 	urlKey := mux.Vars(r)[urlKeyPattern]
 
-	dao := NewDao(shortURLDbPath)
+	shortURLDao := NewDao(shortURLDbPath)
 
-	// To delete the key, we need to delete the URL treated as key as well.
-	// Ignore if no url has been found
-	url, _ := dao.FindByKey(urlKey)
-	
-	status := dao.RemoveByKey(urlKey)
+	status := shortURLDao.RemoveByKey(urlKey)
 	if status == NotFound {
 		sendJSON(w, http.StatusNotFound, genericResponse{"No URL found for key " + urlKey})
 		return
 	}
-	
+
 	if status == Error {
 		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
 		return
 	}
 
-	// Once the url key has been removed, remove the URL as well.
-	NewDao(fullURLDbPath).RemoveByKey(url)
-	
+	// Once the url key has been removed, remove its count as well
+	NewDao(shortURLCountDbPath).RemoveByKey(urlKey)
+
 	sendJSON(w, http.StatusOK, genericResponse{"URL successfully deleted for key " + urlKey})
 }
 
@@ -154,14 +200,91 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusNotFound, genericResponse{"Not Found"})
 }
 
+func countRedirections(w http.ResponseWriter, r *http.Request) {
+	log.Println("GET URL")
+	urlKey := mux.Vars(r)[urlKeyPattern]
+	count, status := NewDao(shortURLCountDbPath).FindByKey(urlKey)
+
+	if status == Error {
+		log.Println("Internal Server Error")
+		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
+		return
+	}
+
+	if status == NotFound {
+		sendJSON(w, http.StatusNotFound, genericResponse{"URL key not found"})
+		return
+	}
+
+	intCount := 0
+
+	if count != "" {
+		intCount, _ = strconv.Atoi(count)
+	}
+
+	message := fmt.Sprintf("Redirections count for %s: %s", urlKey, count)
+	log.Println(message)
+
+	sendJSON(w, http.StatusOK, redirectionsCountResponse{intCount})
+}
+
+func increaseRedirections(urlKey string) {
+	dao := NewDao(shortURLCountDbPath)
+	count, _ := dao.FindByKey(urlKey)
+	intCount, _ := strconv.Atoi(count)
+	intCount++
+	count = strconv.Itoa(intCount)
+	log.Printf("Increased redirections count for %s: %s", urlKey, count)
+	dao.Save(urlKey, count)
+}
+
+func processURLInfo(w http.ResponseWriter, r *http.Request, urlKey string, httpStatus int) {
+	body, err := ioutil.ReadAll(r.Body)
+
+	url := string(body)
+	valid := IsURLValid(url)
+
+	if !valid {
+		log.Printf("Invalid URL: %v\n", url)
+		sendJSON(w, http.StatusBadRequest, genericResponse{"Invalid URL: " + url + ". Be sure it's in the form http://www.placeholder.com"})
+		return
+	}
+
+	if err != nil {
+		log.Printf("Error reading body: %v\n", err)
+		sendJSON(w, http.StatusBadRequest, genericResponse{"Unable to read body"})
+		return
+	}
+
+	status := NewDao(shortURLDbPath).Save(urlKey, string(body))
+
+	if status == Error {
+		log.Println("Internal Server Error")
+		sendJSON(w, http.StatusInternalServerError, genericResponse{"Internal Server Error"})
+		return
+	}
+
+	// Set count redirections to 0
+	go NewDao(shortURLCountDbPath).Save(urlKey, "0")
+
+	fullPath := fmt.Sprintf("http://%s:%s/api/%s", host, port, urlKey)
+	log.Printf("URL %s is located at: %s\n", url, fullPath)
+
+	// Send location as JSON as well
+	sendJSON(w, httpStatus, locationResponse{urlKey, fullPath, "OK"})
+}
+
 func main() {
 	r := mux.NewRouter()
 
-	//r.PathPrefix("/").Handler(http.FileServer(http.Dir("public/")))
-	r.HandleFunc("/api", post).Methods(http.MethodPost)
-	r.HandleFunc("/api/{urlKey}", get).Methods(http.MethodGet)
-	r.HandleFunc("/api/{urlKey}", delete).Methods(http.MethodDelete)
+	r.HandleFunc("/api", postURL).Methods(http.MethodPost)
+	r.HandleFunc("/api/count/{urlKey}", countRedirections).Methods(http.MethodGet)
+	r.HandleFunc("/api/{urlKey}", getURL).Methods(http.MethodGet)
+	r.HandleFunc("/api/{urlKey}", deleteURL).Methods(http.MethodDelete)
+	r.HandleFunc("/api/{urlKey}", putURL).Methods(http.MethodPut)
 	r.HandleFunc("/api", notFound)
+
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("public/")))
 
 	log.Printf("Listening on port %s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, r))

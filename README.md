@@ -1,2 +1,127 @@
-# url-shortener
-URL shortener web service in Golang
+# URL shortener
+
+URL shortener web service in Golang. It allows to generate an ID for URLs and use them to easily access them.
+
+# Description
+
+All URL IDs are base64-encoded timestamps in milliseconds mainly becaue timestamps are natural identifiers, with no possibility of clashing.
+
+Data are saved using [bitcask](https://github.com/prologic/bitcask), a key-value data store.
+
+Keys are the encoded timestamps and values are the original URLs.
+
+Base64-encoding is necessary because keys must be strings (or better, slices of bytes). Values as well must be strings.
+
+# Installation instructions
+
+First of all, open a terminal and navigate in the source code folder.
+
+To init the context and install all dependencies, run
+
+``` 
+go mod tidy
+```
+
+To build the executable, run
+
+``` 
+go build
+```
+
+To run the executable, run
+
+* On Linux: `TODO`
+* On Windows: `url-shortner.exe`
+* On Mac: `TODO`
+
+To run unit tests, run
+
+``` 
+go test
+```
+
+# API commands example
+
+The web service runs on `localhost:8080` . If you have any other service bound on that port, please close it, otherwise the service won't run.
+
+Examples here use [curl](https://curl.haxx.se/).
+
+**IMPORTANT**: all URLs **must be valid**, in the form of `https://www.mycoolwebsite.com` (query params and segments are fine too). 
+
+You need to provide the full URL, complete with the protocol and www, otherwise the request is rejected. 
+
+For `GET` requests we suggest to use a browser instead.
+
+## Full API documentation
+
+To access the API documentation, with response and errors description, from a browser go to `http://localhost:8080`
+
+## Shorten a URL
+
+``` 
+curl -v -X POST http://localhost:8080/api -d "https://duckduckgo.com/?q=very+long+query+for+a+long+url&t=ffnt&atb=v222-1&ia=web"
+```
+
+Response:
+
+``` json
+{
+	"urlKey": "MTU5NTI3OTY5NjgwNw",
+	"location": "http://localhost:8080/api/MTU5NTI3OTY5NjgwNw",
+	"message": "OK"
+}
+```
+
+NB: We set the `Location` header as well.
+
+## Access the original URL
+
+From a browser, using the URL provided in the `POST` response, you will be redirected to the original website
+
+## Update the URL using an ID
+
+``` 
+curl -v -X PUT http://localhost:8080/api/MTU5NTI3OTY5NjgwNw -d "https://duckduckgo.com/?q=another+very+long+query+for+another+long+url&t=ffnt&atb=v222-1&ia=web"
+```
+
+Response
+
+``` json
+{
+	"urlKey": "MTU5NTI3OTY5NjgwNw",
+	"location": "http://localhost:8080/api/MTU5NTI3OTY5NjgwNw",
+	"message": "OK"
+}
+```
+
+NB: We set the `Location` header as well.
+
+## Delete the URL by the ID
+
+``` 
+curl -v -X DELETE http://localhost:8080/api/MTU5NTI3OTY5NjgwNw
+```
+
+Response
+
+``` json
+{
+	"message": "URL successfully deleted for key MTU5NTI3OTY5NjgwNw"
+}
+```
+
+## Get URL redirections count
+
+``` 
+curl -v http://localhost:8080/api/count/MTU5NTI4MDAwNzA2MQ
+```
+
+Response
+
+``` json
+{
+	"redirectionsCount": 2
+}
+```
+
+# 
