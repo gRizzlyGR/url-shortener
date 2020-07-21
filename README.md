@@ -8,7 +8,8 @@ All URL IDs are base64-encoded timestamps in milliseconds mainly because timesta
 
 Data are saved using [bitcask](https://github.com/prologic/bitcask), a key-value data store.
 
-Keys are the encoded timestamps and values are the original URLs.
+There are two DBs, one for storing short URLs
+where keys are the encoded timestamps and values are the original URLs, and the other to keep track of the redirections count, where the keys are always the encoded timestamps and values are indeed the number of redirections.
 
 Base64-encoding is necessary because keys must be strings (or better, slices of bytes). Values as well must be strings.
 
