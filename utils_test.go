@@ -7,7 +7,7 @@ import (
 
 func TestIsValidURL(t *testing.T) {
 	tables := []struct {
-		in  string
+		in       string
 		expected bool
 	}{
 		{"http://www.myunsecuredwebsite.com", true},

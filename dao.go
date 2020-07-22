@@ -80,7 +80,7 @@ func (dao *Dao) RemoveByKey(key string) DbOperationStatus {
 	defer db.Close()
 
 	byteKey := []byte(key)
-	
+
 	if !db.Has(byteKey) {
 		return NotFound
 	}
