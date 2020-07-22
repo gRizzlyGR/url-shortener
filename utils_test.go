@@ -7,8 +7,8 @@ import (
 
 func TestIsValidURL(t *testing.T) {
 	tables := []struct {
-		in       string
-		expected bool
+		url       string
+		want bool
 	}{
 		{"http://www.myunsecuredwebsite.com", true},
 		{"https://www.mysecuredwebsite.com", true},
@@ -23,9 +23,9 @@ func TestIsValidURL(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		result := IsURLValid(table.in)
-		if result != table.expected {
-			t.Errorf("IsValidURL(%v): got: %v, want: %v", table.in, result, table.expected)
+		valid := IsURLValid(table.url)
+		if valid != table.want {
+			t.Errorf("IsValidURL(%v): got: %v, want: %v", table.url, valid, table.want)
 		}
 	}
 }

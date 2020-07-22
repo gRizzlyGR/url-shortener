@@ -57,7 +57,7 @@ func (dao *Dao) FindByKey(key string) (string, DbOperationStatus) {
 
 	url, err := db.Get([]byte(key))
 	if err == bitcask.ErrKeyNotFound {
-		log.Printf("Not Found: %v", err)
+		log.Printf("Not Found for key '%v' - %v", key, err)
 		return "", NotFound
 	}
 
