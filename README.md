@@ -55,12 +55,14 @@ The web service runs on by default on `localhost:8080` if no port is provided as
 
 Examples here use [curl](https://curl.haxx.se/).
 
-**IMPORTANT**: all URLs **must be valid**, in the form of `https://www.mycoolwebsite.com` (query params and segments are fine too). 
+## Important Notes
+All URLs **must be valid**, in the form of `https://www.mycoolwebsite.com` (query params and segments are fine too). 
 
 You need to provide the full URL, complete with the protocol and www, otherwise the request is rejected. 
 
 For `GET` requests we suggest to use a browser instead.
 
+The URL ID generated for the shortening is unique, so remember to use that in sostitution of the dummy one in the examples below.
 ## Full API documentation
 
 To access the API documentation, with response and errors description, from a browser go to `http://localhost:8080` (or the custom port you set).
