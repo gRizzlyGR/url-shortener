@@ -63,7 +63,7 @@ For `GET` requests we suggest to use a browser instead.
 
 ## Full API documentation
 
-To access the API documentation, with response and errors description, from a browser go to `http://localhost:8080`
+To access the API documentation, with response and errors description, from a browser go to `http://localhost:8080` (or the custom port you set).
 
 ## Shorten a URL
 
