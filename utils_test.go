@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestIsValidURL(t *testing.T) {
 	tables := []struct {
-		url       string
+		url  string
 		want bool
 	}{
 		{"http://www.myunsecuredwebsite.com", true},
@@ -33,9 +32,7 @@ func TestIsValidURL(t *testing.T) {
 func TestGenerateID(t *testing.T) {
 	id := GenerateKey(false)
 
-	fmt.Println(id)
-
-	if id == "" {
+	if len(id) != 18 {
 		t.Error("ID is empty")
 	}
 }

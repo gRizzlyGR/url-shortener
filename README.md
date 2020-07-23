@@ -43,10 +43,10 @@ To bind a custom port, enter
 ##
 If no port is provided or it's invalid, the default one is `8080` .
 
-To run unit tests, enter
+To run unit tests and see their coverage, enter
 
 ``` 
-go test
+go test -cover
 ```
 
 # API commands example
@@ -81,11 +81,12 @@ Response:
 }
 ```
 
-NB: We set the `Location` header as well.
+We set the `Location` header as well and the redirections count is initialized to 0.
 
 ## Access the original URL
 
-From a browser, using the URL provided in the `POST` response, you will be redirected to the original website
+From a browser, using the URL provided in the `POST`/`PUT` response, you will be redirected to the original website.
+Redirection counts is increased by 1.
 
 ## Update the URL using an ID
 
@@ -103,7 +104,7 @@ Response
 }
 ```
 
-NB: We set the `Location` header as well.
+We set the `Location` header as well. Redirections count is reset to 0.
 
 ## Delete the URL by the ID
 
@@ -118,6 +119,7 @@ Response
 	"message": "URL successfully deleted for key MTU5NTI3OTY5NjgwNw"
 }
 ```
+We delete the redirections count entry, as well.
 
 ## Get URL redirections count
 
